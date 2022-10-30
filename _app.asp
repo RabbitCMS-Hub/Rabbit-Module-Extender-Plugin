@@ -20,7 +20,7 @@
 
 Class Rabbit_Module_Extender_Plugin
 	Private PLUGIN_CODE, PLUGIN_DB_NAME, PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_CREDITS, PLUGIN_GIT, PLUGIN_DEV_URL, PLUGIN_FILES_ROOT
-	Private MODULE_ROOT, LOADED_MODULES
+	Private MODULE_ROOT, LOADED_MODULES, MODULE_STATUS
 	Private ORDER_JS, ORDER_CSS
 
 	'---------------------------------------------------------------
@@ -41,39 +41,34 @@ Class Rabbit_Module_Extender_Plugin
 		Dim PluginTableName
 			PluginTableName = "tbl_plugin_" & PLUGIN_DB_NAME
     	
-   '  	If TableExist(PluginTableName) = False Then
-			' DebugTimer ""& PLUGIN_CODE &" table creating"
+    	If TableExist(PluginTableName) = False Then
+			DebugTimer ""& PLUGIN_CODE &" table creating"
     		
-   '  		Conn.Execute("SET NAMES utf8mb4;") 
-   '  		Conn.Execute("SET FOREIGN_KEY_CHECKS = 0;") 
+    		Conn.Execute("SET NAMES utf8mb4;") 
+    		Conn.Execute("SET FOREIGN_KEY_CHECKS = 0;") 
     		
-   '  		Conn.Execute("DROP TABLE IF EXISTS `"& PluginTableName &"`")
+    		Conn.Execute("DROP TABLE IF EXISTS `"& PluginTableName &"`")
 
-   '  		q="CREATE TABLE `"& PluginTableName &"` ( "
-   '  		q=q+"  `ID` int(11) NOT NULL AUTO_INCREMENT, "
-   '  		q=q+"  `FILENAME` varchar(255) DEFAULT NULL, "
-   '  		q=q+"  `FULL_PATH` varchar(255) DEFAULT NULL, "
-   '  		q=q+"  `COMPRESS_DATE` datetime DEFAULT NULL, "
-   '  		q=q+"  `COMPRESS_RATIO` double(255,0) DEFAULT NULL, "
-   '  		q=q+"  `ORIGINAL_FILE_SIZE` bigint(20) DEFAULT 0, "
-   '  		q=q+"  `COMPRESSED_FILE_SIZE` bigint(20) DEFAULT 0, "
-   '  		q=q+"  `EARNED_SIZE` bigint(20) DEFAULT 0, "
-   '  		q=q+"  `ORIGINAL_PROTECTED` int(1) DEFAULT 0, "
-   '  		q=q+"  PRIMARY KEY (`ID`), "
-   '  		q=q+"  KEY `IND1` (`FILENAME`) "
-   '  		q=q+") ENGINE=MyISAM DEFAULT CHARSET=utf8; "
-			' Conn.Execute(q)
+    		q="CREATE TABLE `"& PluginTableName &"` ( "
+    		q=q+"  `ID` int(11) NOT NULL AUTO_INCREMENT, "
+    		q=q+"  `MODULE` varchar(255) DEFAULT NULL UNIQUE, "
+    		q=q+"  `ORDER` int(9) DEFAULT 0, "
+    		q=q+"  `STATUS` int(1) DEFAULT 1, "
+    		q=q+"  PRIMARY KEY (`ID`), "
+    		q=q+"  KEY `IND1` (`MODULE`) "
+    		q=q+") ENGINE=MyISAM DEFAULT CHARSET=utf8; "
+			Conn.Execute(q)
 
-   '  		Conn.Execute("SET FOREIGN_KEY_CHECKS = 1;") 
+    		Conn.Execute("SET FOREIGN_KEY_CHECKS = 1;") 
 
-			' ' Create Log
-			' '------------------------------
-   '  		Call PanelLog(""& PLUGIN_CODE &" için database tablosu oluşturuldu", 0, ""& PLUGIN_CODE &"", 0)
+			' Create Log
+			'------------------------------
+    		Call PanelLog(""& PLUGIN_CODE &" için database tablosu oluşturuldu", 0, ""& PLUGIN_CODE &"", 0)
 
-			' ' Register Settings
-			' '------------------------------
-			' DebugTimer ""& PLUGIN_CODE &" class_register() End"
-   '  	End If
+			' Register Settings
+			'------------------------------
+			DebugTimer ""& PLUGIN_CODE &" class_register() End"
+    	End If
 
 		' Register Settings
 		'------------------------------
@@ -100,8 +95,44 @@ Class Rabbit_Module_Extender_Plugin
 		'--------------------------------------------------------
 		' Sub Page 
 		'--------------------------------------------------------
-		If Query.Data("Page") = "SHOW:XXXX" Then
+		If Query.Data("Page") = "SHOW:LoadedModules" Then
 			Call PluginPage("Header")
+
+			With Response 
+				.Write "<div class=""table-responsive"">"
+				.Write "	<table class=""table table-striped table-bordered"">"
+				.Write "		<thead>"
+				.Write "			<tr>"
+				.Write "				<th>Sıra</th>"
+				.Write "				<th>Modül</th>"
+				.Write "				<th>Durum</th>"
+				.Write "				<th>İşlem</th>"
+				.Write "			</tr>"
+				.Write "		</thead>"
+				.Write "		<tbody>"
+				Set Siteler = Conn.Execute("SELECT * FROM `tbl_plugin_"& PLUGIN_DB_NAME &"` ORDER BY `ORDER` ASC")
+				If Siteler.Eof Then 
+				    Response.Write "<tr>"
+				        Response.Write "<td colspan=""4"" align=""center"">Modül Bulunamadı</td>"
+				    Response.Write "</tr>"
+				End If
+				Do While Not Siteler.Eof
+				.Write "			<tr>"
+				.Write "				<td>"& Siteler("ORDER") &"</td>"
+				.Write "				<td>"& Siteler("MODULE") &"</td>"
+				.Write "				<td>"& PLUGIN_STATUS_TEXT( Siteler("STATUS") ) &"</td>"
+				.Write "				<td align=""right"">"
+				' .Write "					<a data-ajax=""true"" data-remove=""tr"" href=""/panel/ajax.asp?Cmd=PluginSettings&PluginName="& PLUGIN_CODE &"&Page=RemoveLog&RecID="& Siteler("ID") &""" class=""btn btn-sm btn-danger"">"
+				' .Write "						Sil"
+				' .Write "					</a>"
+				.Write "				</td>"
+				.Write "			</tr>"
+				Siteler.MoveNext : Loop
+				Siteler.Close : Set Siteler = Nothing
+				.Write "		</tbody>"
+				.Write "	</table>"
+				.Write "</div>"
+			End With
 
 			Call PluginPage("Footer")
 			Call SystemTeardown("destroy")
@@ -128,12 +159,12 @@ Class Rabbit_Module_Extender_Plugin
 
 			.Write "<div class=""row"">"
 			.Write "    <div class=""col-lg-12 col-sm-12"">"
-			.Write "        <a open-iframe href=""ajax.asp?Cmd=PluginSettings&PluginName="& PLUGIN_CODE &"&Page=SHOW:CachedFiles"" class=""btn btn-sm btn-primary"">"
-			.Write "        	Önbelleklenmiş Dosyaları Göster"
+			.Write "        <a open-iframe href=""ajax.asp?Cmd=PluginSettings&PluginName="& PLUGIN_CODE &"&Page=SHOW:LoadedModules"" class=""btn btn-sm btn-primary"">"
+			.Write "        	Yüklü Modülleri Göster"
 			.Write "        </a>"
-			.Write "        <a open-iframe href=""ajax.asp?Cmd=PluginSettings&PluginName="& PLUGIN_CODE &"&Page=DELETE:CachedFiles"" class=""btn btn-sm btn-danger"">"
-			.Write "        	Tüm Önbelleği Temizle"
-			.Write "        </a>"
+			' .Write "        <a open-iframe href=""ajax.asp?Cmd=PluginSettings&PluginName="& PLUGIN_CODE &"&Page=DELETE:CachedFiles"" class=""btn btn-sm btn-danger"">"
+			' .Write "        	Tüm Önbelleği Temizle"
+			' .Write "        </a>"
 			.Write "    </div>"
 			.Write "</div>"
 		End With
@@ -152,7 +183,7 @@ Class Rabbit_Module_Extender_Plugin
     	'-------------------------------------------------------------------------------------
     	PLUGIN_NAME 			= "Rabbit Module Extender Plugin"
     	PLUGIN_CODE  			= "RABBIT_MODULE_EXTENDER"
-    	PLUGIN_DB_NAME 			= "" ' tbl_plugin_XXXXXXX
+    	PLUGIN_DB_NAME 			= "module_extender"
     	PLUGIN_VERSION 			= "1.0.0"
     	PLUGIN_CREDITS 			= "@badursun Anthony Burak DURSUN"
     	PLUGIN_GIT 				= "https://github.com/RabbitCMS-Hub/Rabbit-Module-Extender-Plugin"
@@ -162,11 +193,12 @@ Class Rabbit_Module_Extender_Plugin
     	' PluginTemplate Main Variables
     	'-------------------------------------------------------------------------------------
 
-		MODULE_ROOT 	= "/content/vendor/"
-		LOADED_MODULES 	= ""
+		MODULE_ROOT 			= "/content/vendor/"
+		LOADED_MODULES 			= ""
+		MODULE_STATUS 			= Cint( GetSettings(""& PLUGIN_CODE &"_ACTIVE", "1") )
 
-		ORDER_JS 		= 60
-		ORDER_CSS 		= 80
+		ORDER_JS 				= 60
+		ORDER_CSS 				= 80
 
     	'-------------------------------------------------------------------------------------
     	' PluginTemplate Register App
@@ -226,6 +258,10 @@ Class Rabbit_Module_Extender_Plugin
 	'
 	'---------------------------------------------------------------
 	Public Property Let Load(vModuleName)
+		If MODULE_STATUS = 0 Then 
+			Exit Property
+		End If
+
 		If Len(vModuleName) < 1 Then 
 			Exit Property
 		End If
@@ -235,6 +271,8 @@ Class Rabbit_Module_Extender_Plugin
 			ModuleVendorRoot = Server.Mappath(ModuleVendorPath)
 
 		If IsFolderExist(ModuleVendorRoot) Then
+			AddToDB vModuleName, 0
+
 	        Set ModuleFiles = Server.CreateObject("Scripting.FileSystemObject")
                 Set FileList = ModuleFiles.GetFolder( ModuleVendorRoot )
                     For Each x In FileList.files
@@ -262,6 +300,16 @@ Class Rabbit_Module_Extender_Plugin
 		End If
 
 	End Property
+	'---------------------------------------------------------------
+	'
+	'---------------------------------------------------------------
+
+	'---------------------------------------------------------------
+	'
+	'---------------------------------------------------------------
+	Private Sub AddToDB(Module, OrderNo)
+		Conn.Execute("INSERT IGNORE INTO `tbl_plugin_"& PLUGIN_DB_NAME &"`(`MODULE`, `ORDER`) VALUES('"& Module &"','"& OrderNo &"')")
+	End Sub
 	'---------------------------------------------------------------
 	'
 	'---------------------------------------------------------------
