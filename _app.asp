@@ -19,7 +19,7 @@
 '**********************************************
 
 Class Rabbit_Module_Extender_Plugin
-	Private PLUGIN_CODE, PLUGIN_DB_NAME, PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_CREDITS, PLUGIN_GIT, PLUGIN_DEV_URL, PLUGIN_FILES_ROOT, PLUGIN_ICON, PLUGIN_REMOVABLE, PLUGIN_ROOT, PLUGIN_FOLDER_NAME
+	Private PLUGIN_CODE, PLUGIN_DB_NAME, PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_CREDITS, PLUGIN_GIT, PLUGIN_DEV_URL, PLUGIN_FILES_ROOT, PLUGIN_ICON, PLUGIN_REMOVABLE, PLUGIN_ROOT, PLUGIN_FOLDER_NAME, PLUGIN_AUTOLOAD
 	Private MODULE_ROOT, LOADED_MODULES, MODULE_STATUS
 	Private ORDER_JS, ORDER_CSS
 
@@ -190,6 +190,8 @@ Class Rabbit_Module_Extender_Plugin
     	PLUGIN_DEV_URL 			= "https://adjans.com.tr"
     	PLUGIN_ICON 			= "zmdi-pin-help"
     	PLUGIN_REMOVABLE 		= True
+    	PLUGIN_AUTOLOAD 		= True
+    	PLUGIN_ROOT 			= PLUGIN_DIST_FOLDER_PATH(This)
     	PLUGIN_FILES_ROOT 		= PLUGIN_VIRTUAL_FOLDER(This)
     	'-------------------------------------------------------------------------------------
     	' PluginTemplate Main Variables
@@ -206,6 +208,13 @@ Class Rabbit_Module_Extender_Plugin
     	' PluginTemplate Register App
     	'-------------------------------------------------------------------------------------
     	class_register()
+
+    	'-------------------------------------------------------------------------------------
+    	' Hook Auto Load Plugin
+    	'-------------------------------------------------------------------------------------
+    	If PLUGIN_AUTOLOAD_AT("WEB") = True Then 
+
+    	End If
 	End Sub
 	'---------------------------------------------------------------
 	' Class First Init
@@ -238,9 +247,10 @@ Class Rabbit_Module_Extender_Plugin
 	Public Property Get PluginRoot() 		: PluginRoot = PLUGIN_ROOT 					: End Property
 	Public Property Get PluginFolderName() 	: PluginFolderName = PLUGIN_FOLDER_NAME 	: End Property
 	Public Property Get PluginDBTable() 	: PluginDBTable = IIf(Len(PLUGIN_DB_NAME)>2, "tbl_plugin_"&PLUGIN_DB_NAME, "") 	: End Property
+	Public Property Get PluginAutoload() 	: PluginAutoload = PLUGIN_AUTOLOAD 			: End Property
 
 	Private Property Get This()
-		This = Array(PluginCode, PluginName, PluginVersion, PluginGit, PluginDevURL, PluginFolder, PluginIcon, PluginRemovable, PluginCredits, PluginRoot, PluginFolderName, PluginDBTable )
+		This = Array(PluginCode, PluginName, PluginVersion, PluginGit, PluginDevURL, PluginFolder, PluginIcon, PluginRemovable, PluginCredits, PluginRoot, PluginFolderName, PluginDBTable, PluginAutoload)
 	End Property
 	'---------------------------------------------------------------
 	' Plugin Defines
